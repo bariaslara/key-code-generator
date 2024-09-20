@@ -1,0 +1,64 @@
+import random
+import datetime
+import xlwings as xw
+
+def run_script():
+    def readFile(path):
+        with open(path, 'r') as f:
+            return f.readlines()
+
+    def check_duplicate_key(path, new_key):
+        keys = [line.split(',')[0] for line in readFile(path)]
+        return new_key in keys
+
+    def generate_unique_key(path):
+        while True:
+            key = str(random.randint(1000, 9999))
+            if not check_duplicate_key(path, key):
+                return key
+
+    def add_key_code(path, booking_id):
+        # Convert the booking_id to a string to avoid int or float issues
+        booking_id = str(booking_id)
+    
+        # Generate the unique key and get the current date
+        key = generate_unique_key(path)
+        date_created = datetime.datetime.now().strftime("%Y-%m-%d")
+    
+        # Append the key code, date, and booking ID to the text file
+        with open(path, "a") as f:
+            f.write(f"{key},{date_created},{booking_id}\n")
+    
+        # Add the data to the second sheet in the Excel workbook
+        wb = xw.Book.caller()
+        sheet2 = wb.sheets[1]  # Reference the second sheet (index 1)
+    
+        # Find the next available row in column A
+        next_row = sheet2.range('A' + str(sheet2.cells.last_cell.row)).end('up').row + 1
+    
+        # Write the key, date, and booking ID to the second sheet
+        sheet2.range(f"A{next_row}").value = key
+        sheet2.range(f"B{next_row}").value = date_created
+        sheet2.range(f"C{next_row}").value = booking_id
+    
+    # update to reflect path
+    path = "..."
+    
+    # Get the command and booking ID from the Excel sheet
+    wb = xw.Book.caller()
+    sheet = wb.sheets[0]
+    
+    # Read the command from cell B1 and booking ID from cell B2
+    user_input = sheet.range("B1").value.lower()
+    booking_id = sheet.range("B2").value
+    
+    if user_input == 'add':
+        add_key_code(path, booking_id)
+
+    # Update the Excel sheet with a success message
+    date = datetime.datetime.now().strftime("%Y-%m-%d")
+    sheet.range("A3").value = "Script executed successfully!"
+    sheet.range("A4").value = f"Execution Date/Time: {date}"
+
+if __name__ == "__main__":
+    run_script()
